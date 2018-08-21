@@ -162,7 +162,8 @@ def input_betrag(bot, user_id):
 
     users[user_id].state = 1
 
-    bot.send_message(chat_id=user_id, text="Wie viel schuldet %s dir?"%users[ users[user_id].target_id ].name)
+    text = "Wie viel schuldet %s dir? (Optional: Warum?)\n"%users[ users[user_id].target_id ].name
+    bot.send_message(chat_id=user_id, text=text)
 
 
 
@@ -220,11 +221,14 @@ def message(bot, update):
 
 
     if users[user_id].state == 1:
-        if isfloat(text):
-            betrag = float(text)
+        inhalt = text.split(' ', 1)
+        if isfloat(inhalt[0]):
+            betrag = float(inhalt[0])
             target_id = users[user_id].target_id
             add_debt(target_id, user_id, betrag)
-            target_text = "{} just added a debt of {} from you.".format(users[user_id].name, betrag)
+            target_text = "{} hat dir Schulden in Höhe von {} eingetragen".format(users[user_id].name, betrag)
+            if len(inhalt) == 2:
+                target_text += " für {}".format(inhalt[1])
             accept_button = InlineKeyboardButton("Accept", callback_data = 'accept')
             reject_button = InlineKeyboardButton("Reject", callback_data='reject {} {} {}'.format(target_id, user_id, betrag))
             target_markup = InlineKeyboardMarkup([[accept_button, reject_button]], resize_keyboard=True, one_time_keyboard=True)

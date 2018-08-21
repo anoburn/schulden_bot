@@ -76,6 +76,7 @@ class Verwalter:
             key_target = self.get_key(i)
             debt = self.bilanz[key, key_target]
             debt -= self.bilanz[key_target, key]
-            debts.append((i, debt))
+            if round(abs(debt), 2) >= 0.01:
+                debts.append((i, debt))
 
         return debts
