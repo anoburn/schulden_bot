@@ -16,13 +16,15 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=lo
 updater = Updater(token="")     # Insert bot token here
 dispatcher = updater.dispatcher
 
+folder = os.path.dirname(os.path.abspath(__file__)) + "/"
+
 def save_users():
-    datei = open("users.obj", "wb")
+    datei = open(folder + "users.obj", "wb")
     pickle.dump(users,datei)
 
 
 def save_verwalter():
-    datei = open("schulden.obj", "wb")
+    datei = open(folder + "schulden.obj", "wb")
     pickle.dump(schulden,datei)
 
 
@@ -35,14 +37,14 @@ def isfloat(value):
 
 
 
-if os.path.isfile("users.obj"):
-    file = open("users.obj", "rb")
+if os.path.isfile(folder + "users.obj"):
+    file = open(folder + "users.obj", "rb")
     users = pickle.load(file)
 else:
     users = {}
 
-if os.path.isfile("schulden.obj"):
-    file = open("schulden.obj", "rb")
+if os.path.isfile(folder + "schulden.obj"):
+    file = open(folder + "schulden.obj", "rb")
     schulden = pickle.load(file)
 else:
     schulden = verwalter.Verwalter()
