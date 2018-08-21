@@ -13,10 +13,14 @@ import os.path
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-updater = Updater(token="")     # Insert bot token here
-dispatcher = updater.dispatcher
 
 folder = os.path.dirname(os.path.abspath(__file__)) + "/"
+
+with open(folder + "token.txt", "r") as token_file:
+	token = token_file.readline()
+updater = Updater(token=token)     # Insert bot token here
+dispatcher = updater.dispatcher
+
 
 def save_users():
     datei = open(folder + "users.obj", "wb")
