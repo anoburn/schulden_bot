@@ -62,7 +62,7 @@ def start(bot, update):
     """ To do: erkennen wenn bot in einer Gruppe ist """
     user_id = update.message.from_user.id
     bot.send_message(chat_id=update.message.chat_id,
-                     text="Hallo! Ich bin der Schulden_bot! Sende mir einen Kontakt um loszulegen",
+                     text="Hallo! Ich bin der Schulden_bot!\n Sende mir einen Kontakt um loszulegen",
                      reply_markup=base_markup)
     ensure_user(user_id, bot)
     users[user_id].available = True
@@ -196,10 +196,13 @@ def show_bilanz(bot, update):
     ensure_user(user_id, bot)
 
     bilanz = schulden.get_balance(user_id)
-    text = "Du schuldest \n"
-    for id, betrag in bilanz:
-        name = users[id].name
-        text += "%s noch %.2f€\n"%(name, betrag)
+    if len(bilanz) == 0:
+        text = "Du hast derzeit keine Schulden offen"
+    else:
+        text = "Du schuldest \n"
+        for id, betrag in bilanz:
+            name = users[id].name
+            text += "%s noch %.2f€\n"%(name, betrag)
     bot.send_message(chat_id=user_id, text=text, reply_markup=base_markup)
 
 bilanz_handler = CommandHandler("bilanz", show_bilanz)
