@@ -1,8 +1,7 @@
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler, CallbackQueryHandler
 from telegram import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 import logging
-import verwalter
-import user
+import verwaltung
 import pickle
 import os.path
 
@@ -17,19 +16,14 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=lo
 folder = os.path.dirname(os.path.abspath(__file__)) + "/"
 
 with open(folder + "token.txt", "r") as token_file:
-	token = token_file.readline()
+    token = token_file.readline()
 updater = Updater(token=token)     # Insert bot token here
 dispatcher = updater.dispatcher
 
 
-def save_users():
-    datei = open(folder + "users.obj", "wb")
-    pickle.dump(users,datei)
-
-
 def save_verwalter():
-    datei = open(folder + "schulden.obj", "wb")
-    pickle.dump(schulden,datei)
+    with open(folder + "verwalter.obj", "wb") as verwalter_datei:
+        pickle.dump(verwalter, verwalter_datei)
 
 
 def isfloat(value):
@@ -40,19 +34,11 @@ def isfloat(value):
     return False
 
 
-
-if os.path.isfile(folder + "users.obj"):
-    file = open(folder + "users.obj", "rb")
-    users = pickle.load(file)
+if os.path.isfile(folder + "verwalter.obj"):
+    with open(folder + "verwalter.obj", "rb") as verwalter_datei:
+        verwalter = pickle.load(verwalter_datei)
 else:
-    users = {}
-
-if os.path.isfile(folder + "schulden.obj"):
-    file = open(folder + "schulden.obj", "rb")
-    schulden = pickle.load(file)
-else:
-    schulden = verwalter.Verwalter()
-
+    verwalter = verwaltung.Verwalter()
 
 
 base_markup = ReplyKeyboardMarkup([["Bilanz", "Schulden hinzufügen"]], resize_keyboard=True)
@@ -65,7 +51,7 @@ def start(bot, update):
                      text="Hallo! Ich bin der Schulden_bot!\n Sende mir einen Kontakt um loszulegen",
                      reply_markup=base_markup)
     ensure_user(user_id, bot)
-    users[user_id].available = True
+    verwalter.users[user_id].available = True
 
 dispatcher.add_handler(CommandHandler("start", start))
 
@@ -86,9 +72,9 @@ def query_function(bot, update):
         betrag    = float(query_split[3])
         add_debt(debt_from, debt_to, - betrag)
         logging.info('Rejected debt')
-        text = "{} hat {}€ Schulden abgelehnt.".format(users[user_id].name, betrag)
+        text = "{} hat {}€ Schulden abgelehnt.".format(verwalter.users[user_id].name, betrag)
         bot.send_message(chat_id=debt_to, text=text)
-        text = "Du hast {}€ Schulden an {} abgelehnt".format(betrag, users[debt_to].name)
+        text = "Du hast {}€ Schulden an {} abgelehnt".format(betrag, verwalter.users[debt_to].name)
         bot.edit_message_text(text=text, chat_id=query.message.chat_id, message_id=query.message.message_id)
         return
 
@@ -96,11 +82,11 @@ def query_function(bot, update):
         target_id = int(query.data)
         ensure_user(target_id, bot)
 
-        users[user_id].target_id = target_id
-        users[user_id].state = 1
+        verwalter.users[user_id].target_id = target_id
+        verwalter.users[user_id].state = 1
 
         text_old = query.message.text
-        bot.edit_message_text(text=text_old + "\n%s"%users[ target_id ].name,
+        bot.edit_message_text(text=text_old + "\n%s"%verwalter.users[ target_id ].name,
                               chat_id=query.message.chat_id,
                               message_id=query.message.message_id)
 
@@ -110,21 +96,18 @@ dispatcher.add_handler(CallbackQueryHandler(query_function))
 
 
 def find_id(username):
-    for key in users.keys():
-        if users[key].name == username:
+    for key in verwalter.users.keys():
+        if verwalter.users[key].name == username:
             return key
     logging.error("Couldn't find id to username %s"%username)
     return -1
 
 
-
 def ensure_user(user_id, bot):
-    if user_id not in users.keys():
-        users[user_id] = user.User(user_id, bot)
-        schulden.ensure_user(user_id)
-        logging.info("User %i, also known as %s, added to system"%(user_id, users[user_id].name))
-        save_users()
-
+    if user_id not in verwalter.users.keys():
+        verwalter.ensure_user(user_id, bot)
+        logging.info("User %i, also known as %s, added to system"%(user_id, verwalter.users[user_id].name))
+        save_verwalter()
 
 
 def add_debt(von_id, an_id, betrag):
@@ -132,7 +115,7 @@ def add_debt(von_id, an_id, betrag):
         logging.debug("Given order to add debt to self")
         return
 
-    schulden.add_debt(von_id, an_id, betrag)
+    verwalter.add_debt(von_id, an_id, betrag)
     save_verwalter()
 
 
@@ -142,8 +125,8 @@ def input_contact(bot, update):
     ensure_user(user_id, bot)
 
     keyboard = []
-    for contact in users[user_id].contacts:
-        name = users[contact].name
+    for contact in verwalter.users[user_id].contacts:
+        name = verwalter.users[contact].name
         button = InlineKeyboardButton(name, callback_data=contact)
         keyboard.append([button])
     contact_markup = InlineKeyboardMarkup(keyboard, resize_keyboard = True, one_time_keyboard = True)
@@ -153,22 +136,20 @@ input_contact_handler = CommandHandler("input_contact", input_contact)
 dispatcher.add_handler(input_contact_handler)
 
 
-
 def input_betrag(bot, user_id):
     logging.info("input_betrag aufgerufen")
 
     ensure_user(user_id, bot)
 
-    if not users[ users[user_id].target_id ].available:
-        users[user_id].state = 0
+    if not verwalter.users[ verwalter.users[user_id].target_id ].available:
+        verwalter.users[user_id].state = 0
         bot.send_message(chat_id=user_id, text="Dein Ziel hat mich noch nicht hinzugefügt. Vorgang kann nicht durchgeführt werden.")
         return
 
-    users[user_id].state = 1
+    verwalter.users[user_id].state = 1
 
-    text = "Wie viel schuldet %s dir? (Optional: Warum?)\n"%users[ users[user_id].target_id ].name
+    text = "Wie viel schuldet %s dir? (Optional: Warum?)\n"%verwalter.users[ verwalter.users[user_id].target_id ].name
     bot.send_message(chat_id=user_id, text=text)
-
 
 
 def contact(bot, update):
@@ -178,10 +159,10 @@ def contact(bot, update):
     ensure_user(user_id, bot)
     ensure_user(target.user_id, bot)
 
-    users[user_id].add_contact(target.user_id)
-    users[target.user_id].add_contact(user_id)
-    users[user_id].target_id = target.user_id
-    save_users()
+    verwalter.users[user_id].add_contact(target.user_id)
+    #users[target.user_id].add_contact(user_id)
+    verwalter.users[user_id].target_id = target.user_id
+    save_verwalter()
 
     input_betrag(bot, user_id)
    
@@ -195,20 +176,17 @@ def show_bilanz(bot, update):
     user_id = update.message.from_user.id
     ensure_user(user_id, bot)
 
-    bilanz = schulden.get_balance(user_id)
+    bilanz = verwalter.get_balance(user_id)
     if len(bilanz) == 0:
         text = "Du hast derzeit keine Schulden offen"
     else:
         text = "Du schuldest \n"
-        for id, betrag in bilanz:
-            name = users[id].name
+        for name, betrag in bilanz:
             text += "%s noch %.2f€\n"%(name, betrag)
     bot.send_message(chat_id=user_id, text=text, reply_markup=base_markup)
 
 bilanz_handler = CommandHandler("bilanz", show_bilanz)
 dispatcher.add_handler(bilanz_handler)
-
-
 
 
 def message(bot, update):
@@ -222,18 +200,18 @@ def message(bot, update):
         return
 
     elif text == "Schulden hinzufügen":
-        users[user_id].state = 2
+        verwalter.users[user_id].state = 2
         input_contact(bot, update)
         return
 
-
-    if users[user_id].state == 1:
+    if verwalter.users[user_id].state == 1:
         inhalt = text.split(' ', 1)
         if isfloat(inhalt[0]):
             betrag = float(inhalt[0])
-            target_id = users[user_id].target_id
+            target_id = verwalter.users[user_id].target_id
+            ensure_user(target_id, bot)
             add_debt(target_id, user_id, betrag)
-            target_text = "{} hat dir Schulden in Höhe von {} eingetragen".format(users[user_id].name, betrag)
+            target_text = "{} hat dir Schulden in Höhe von {} eingetragen".format(verwalter.users[user_id].name, betrag)
             if len(inhalt) == 2:
                 target_text += " für {}".format(inhalt[1])
             accept_button = InlineKeyboardButton("Accept", callback_data = 'accept')
@@ -241,14 +219,14 @@ def message(bot, update):
             target_markup = InlineKeyboardMarkup([[accept_button, reject_button]], resize_keyboard=True, one_time_keyboard=True)
             bot.send_message(chat_id=user_id, text="Schulden hinzugefügt")
             bot.send_message(chat_id=target_id, text=target_text, reply_markup=target_markup)
-            users[user_id].state = 0
-            save_users()
+            verwalter.users[user_id].state = 0
+            save_verwalter()
         return
 
-    if users[user_id].state == 2:
+    if verwalter.users[user_id].state == 2:
         target_id = find_id(text)
         if not target_id == -1:
-            users[user_id].target_id = target_id
+            verwalter.users[user_id].target_id = target_id
             input_betrag(bot, user_id)
         return
 
@@ -260,27 +238,17 @@ def return_state(bot, update):
     user_id = update.message.from_user.id
     ensure_user(user_id, bot)
 
-    state = users[user_id].state
+    state = verwalter.users[user_id].state
     bot.send_message(chat_id=user_id, text="Du bist im state %i"%state)
 
 dispatcher.add_handler(CommandHandler("state", return_state))
 
 
-
 message_handler = MessageHandler(Filters.text, message)
 dispatcher.add_handler(message_handler)
-
-
-
-
-
-
-
-
 
 logging.info("Starting bot")
 updater.start_polling()
 updater.idle()
-
 
 logging.info("Bot has stopped polling")
