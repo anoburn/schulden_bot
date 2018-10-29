@@ -12,6 +12,7 @@ class User:
         self.name = chat.first_name
         self.contacts = []
         self.state = 0
+        self.targets = []
         self.available = False
 
 
