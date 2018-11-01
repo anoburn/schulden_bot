@@ -171,6 +171,8 @@ def add_debt_intern(von_id, an_id, betrag):
 
 def add_debt(bot, user_id, target_id, betrag, reason_text=None):
     add_debt_intern(target_id, user_id, betrag)
+    if not user_id in verwalter.users[target_id].contacts:
+        verwalter.users[target_id].add_contact(user_id)
     betrag = round(betrag, 2)
     target_text = "{} hat dir Schulden in Höhe von {} eingetragen".format(verwalter.users[user_id].name, betrag)
     user_text = "Du hast {} Schulden in Höhe von {} eingetragen".format(verwalter.users[target_id].name, betrag)
@@ -250,10 +252,7 @@ def contact(bot, update):
     ensure_user(target.user_id, bot)
 
     verwalter.users[user_id].add_contact(target.user_id)
-    #users[target.user_id].add_contact(user_id)
     save_verwalter()
-
-    input_betrag(bot, user_id)
 
 contact_handler = MessageHandler(Filters.contact, contact)
 dispatcher.add_handler(contact_handler)
