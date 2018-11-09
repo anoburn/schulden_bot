@@ -5,6 +5,7 @@ import logging
 import verwaltung
 import pickle
 import os.path
+from datetime import time
 
 # USER STATES:
 # 0: initial
@@ -21,6 +22,7 @@ with open(folder + "token.txt", "r") as token_file:
     token = token_file.readline()
 updater = Updater(token=token)     # Insert bot token here
 dispatcher = updater.dispatcher
+job_queue = updater.job_queue
 
 
 def save_verwalter():
@@ -102,7 +104,6 @@ def query_function(bot, update):
 
     if query_split[0] == "add_all":
         for contact in verwalter.users[user_id].contacts:
-            name = verwalter.users[contact].name
             if verwalter.users[contact].available:
                 if not contact in verwalter.users[user_id].targets:
                     verwalter.users[user_id].targets.append(contact)
@@ -305,6 +306,48 @@ def add_gruppenzahlung(bot, update):
 dispatcher.add_handler(CommandHandler("gruppenzahlung", add_gruppenzahlung))
 
 
+def solve_chains(bot, job):
+    logging.info("Called solve_chains")
+    user_texte = {user_id: "" for user_id in verwalter.users}
+    for user_id in verwalter.users:
+        if not verwalter.has_debt(user_id):
+            continue
+        for creditor_id, betrag in verwalter.get_creditors(user_id):
+            if not verwalter.has_debt(creditor_id):
+                continue
+            for next_creditor_id, next_betrag in verwalter.get_creditors(creditor_id):
+                #if verwalter.has_debt_with(user_id, next_creditor_id):     # Alternative Bedingung falls besser
+                if next_creditor_id in verwalter.users[user_id].contacts:
+                    change = min(betrag, next_betrag)
+                    add_debt_intern(user_id, next_creditor_id, change)
+                    add_debt_intern(creditor_id, user_id, change)
+                    add_debt_intern(next_creditor_id, creditor_id, change)
+                    user_name = verwalter.users[user_id].name
+                    creditor_name = verwalter.users[creditor_id].name
+                    next_creditor_name = verwalter.users[next_creditor_id].name
+                    user_texte[user_id] += "\n{}€ Schulden von {} zu {} gewechselt".format(change, creditor_name, next_creditor_name)
+                    if change < next_betrag:
+                        user_texte[creditor_id] += "\n{} übernimmt {}€ deiner Schulden an {}".format(user_name, change, next_creditor_name)
+                        user_texte[next_creditor_id] += "\n{} übernimmt {}€ der Schulden von {}".format(user_name, change, creditor_name)
+                    else:
+                        user_texte[creditor_id] += "\n{} übernimmt deine {}€ Schulden an {}".format(user_name, change, next_creditor_name)
+                        user_texte[next_creditor_id] += "\n{} übernimmt die {}€ Schulden von {}".format(user_name, change, creditor_name)
+
+                    logging.info("Solving {}->{}->{} with {}€".format(user_name, creditor_name, next_creditor_name,
+                                                                      change))
+                    betrag -= change
+                if betrag <= 0:
+                    break
+
+    for user_id, text in user_texte.items():
+        if len(text) == 0:
+            continue
+        else:
+            bot.send_message(chat_id=user_id, text=text)
+
+dispatcher.add_handler(CommandHandler("solve_chains", solve_chains))
+
+
 def message(bot, update):
     logging.info("message aufgerufen")
     user_id = update.message.chat_id
@@ -373,6 +416,9 @@ def return_state(bot, update):
 
 dispatcher.add_handler(CommandHandler("state", return_state))
 
+
+job_time = time(hour=6)
+job_queue.run_daily(solve_chains, time=job_time)
 
 logging.info("Starting bot")
 updater.start_polling()

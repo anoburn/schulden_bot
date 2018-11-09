@@ -37,6 +37,14 @@ class Verwalter:
         return self.users[user_id].index
 
 
+    def get_id(self, index):
+        for user_id, user in self.users.items():
+            if user.index == index:
+                return user_id
+        logging.error("Requested user index not found: {}".format(index))
+        return -1
+
+
     def ensure_user(self, user_id, bot):
         if user_id not in self.users.keys():
             index = len(self.users)
@@ -86,3 +94,33 @@ class Verwalter:
             if round(abs(debt), 2) >= 0.01:
                 debts.append((user.name, debt))
         return debts
+
+
+    def has_debt(self, user_id):
+        index = self.get_index(user_id)
+        user_bilanz = self.bilanz[index] - self.bilanz[:, index]
+        if np.sum(user_bilanz > 0) > 0:
+            return True
+        else:
+            return False
+
+
+    def has_debt_with(self, user_id, target_id):
+        user_index = self.get_index(user_id)
+        target_index = self.get_index(target_id)
+        debt = self.bilanz[user_index, target_index] - self.bilanz[target_index, user_index]
+        if debt != 0:
+            return True
+        else:
+            return False
+
+
+    def get_creditors(self, user_id):
+        """ Return everyone the user has debts to and the value owed, sorted in descending order """
+        index = self.get_index(user_id)
+        user_bilanz = self.bilanz[index] - self.bilanz[:, index]
+        creditors = []
+        for creditor_index in np.argwhere(user_bilanz > 0).flatten():
+            debt = user_bilanz[creditor_index]
+            creditors.append((self.get_id(creditor_index), debt))
+        return reversed(sorted(creditors, key=lambda x: x[1]))
