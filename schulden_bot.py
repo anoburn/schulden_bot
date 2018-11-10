@@ -343,6 +343,7 @@ def solve_chains(bot, job):
         if len(text) == 0:
             continue
         else:
+            text = "Deine Schulden haben sich geändert:\n" + text
             bot.send_message(chat_id=user_id, text=text)
 
 dispatcher.add_handler(CommandHandler("solve_chains", solve_chains))

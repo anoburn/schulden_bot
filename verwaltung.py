@@ -99,7 +99,7 @@ class Verwalter:
     def has_debt(self, user_id):
         index = self.get_index(user_id)
         user_bilanz = self.bilanz[index] - self.bilanz[:, index]
-        if np.sum(user_bilanz > 0) > 0:
+        if np.sum(user_bilanz >= 0.01) > 0:
             return True
         else:
             return False
@@ -109,7 +109,7 @@ class Verwalter:
         user_index = self.get_index(user_id)
         target_index = self.get_index(target_id)
         debt = self.bilanz[user_index, target_index] - self.bilanz[target_index, user_index]
-        if debt != 0:
+        if abs(debt) >= 0.01:
             return True
         else:
             return False
@@ -120,7 +120,7 @@ class Verwalter:
         index = self.get_index(user_id)
         user_bilanz = self.bilanz[index] - self.bilanz[:, index]
         creditors = []
-        for creditor_index in np.argwhere(user_bilanz > 0).flatten():
+        for creditor_index in np.argwhere(user_bilanz >= 0.01).flatten():
             debt = user_bilanz[creditor_index]
             creditors.append((self.get_id(creditor_index), debt))
         return reversed(sorted(creditors, key=lambda x: x[1]))
