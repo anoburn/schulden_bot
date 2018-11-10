@@ -325,15 +325,15 @@ def solve_chains(bot, job):
                     user_name = verwalter.users[user_id].name
                     creditor_name = verwalter.users[creditor_id].name
                     next_creditor_name = verwalter.users[next_creditor_id].name
-                    user_texte[user_id] += "\n{}€ Schulden von {} zu {} gewechselt".format(change, creditor_name, next_creditor_name)
+                    user_texte[user_id] += "\n{:.2f}€ Schulden von {} zu {} gewechselt".format(change, creditor_name, next_creditor_name)
                     if change < next_betrag:
-                        user_texte[creditor_id] += "\n{} übernimmt {}€ deiner Schulden an {}".format(user_name, change, next_creditor_name)
-                        user_texte[next_creditor_id] += "\n{} übernimmt {}€ der Schulden von {}".format(user_name, change, creditor_name)
+                        user_texte[creditor_id] += "\n{} übernimmt {:.2f}€ deiner Schulden an {}".format(user_name, change, next_creditor_name)
+                        user_texte[next_creditor_id] += "\n{} übernimmt {:.2f}€ der Schulden von {}".format(user_name, change, creditor_name)
                     else:
-                        user_texte[creditor_id] += "\n{} übernimmt deine {}€ Schulden an {}".format(user_name, change, next_creditor_name)
-                        user_texte[next_creditor_id] += "\n{} übernimmt die {}€ Schulden von {}".format(user_name, change, creditor_name)
+                        user_texte[creditor_id] += "\n{} übernimmt deine {:.2f}€ Schulden an {}".format(user_name, change, next_creditor_name)
+                        user_texte[next_creditor_id] += "\n{} übernimmt die {:.2f}€ Schulden von {}".format(user_name, change, creditor_name)
 
-                    logging.info("Solving {}->{}->{} with {}€".format(user_name, creditor_name, next_creditor_name,
+                    logging.info("Solving {}->{}->{} with {:.2f}€".format(user_name, creditor_name, next_creditor_name,
                                                                       change))
                     betrag -= change
                 if betrag <= 0:
