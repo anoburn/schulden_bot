@@ -269,8 +269,12 @@ def show_bilanz(bot, update):
         text = "Du hast derzeit keine Schulden offen"
     else:
         text = "Du schuldest \n"
+        summe = 0
         for name, betrag in bilanz:
             text += "%s noch %.2f€\n"%(name, betrag)
+            summe += betrag
+        text += "-------------\n"
+        text += "Summe: {:.2f}€".format(summe)
     bot.send_message(chat_id=user_id, text=text, reply_markup=base_markup)
 
 bilanz_handler = CommandHandler("bilanz", show_bilanz)
