@@ -171,6 +171,11 @@ def add_debt_intern(von_id, an_id, betrag):
 
 
 def add_debt(bot, user_id, target_id, betrag, reason_text=None):
+    # Verhindere Riesenbeträge die Rundungsfehler erzeugen könnten
+    if abs(betrag) > 10000:
+        bot.send_message(chat_id=user_id, text="Ach komm, als ob ... :P")
+        return
+
     add_debt_intern(target_id, user_id, betrag)
     if not user_id in verwalter.users[target_id].contacts:
         verwalter.users[target_id].add_contact(user_id)
